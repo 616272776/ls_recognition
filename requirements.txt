@@ -1,0 +1,6 @@
+watchdog
+PIL
+requests
+cv2
+paddlepaddle-gpu==2.3.2
+paddleocr>=2.0.1
