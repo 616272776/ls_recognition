@@ -5,9 +5,13 @@ from paddleocr import PaddleOCR
 from PIL import Image
 import requests
 import json
-# import cv2 as cv
+import cv2 as cv
 import sys
 import os
+import numpy as np
+
+ocr = PaddleOCR(use_angle_cls=True, lang="ch",
+                page_num=2)  # need to run only once to download and load model into memory
 
 
 # 根据路径获取json对象
@@ -24,6 +28,50 @@ def getConfigJson(stageConfigPath):
     return stageConfigJson
 
 
+#cv图像预处理
+def cv_pretreatmentAndProcessing(cutPicPath):
+    #图片读取
+    img = cv.imread(cutPicPath, 1)
+    #预处理阶段
+    img_s = img.shape  # 显示尺寸
+    print(img_s)
+    size = cv.resize(img, (348, 96))  # 更改尺寸
+    gray = cv.cvtColor(size, cv.COLOR_BGR2GRAY)  # 灰度处理
+    ret, binary = cv.threshold(gray, 120, 255, cv.THRESH_BINARY)  # 二值化
+    kernel = np.ones(shape=[0, 0], dtype=np.uint8)  # 定义核结构
+    eo = cv.dilate(binary, kernel, iterations=0)
+
+    #图像加工阶段
+    #处理3的
+    contours3, hierarchy3 = cv.findContours(eo, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)# 图片轮廓
+    cnt3 = contours3[3]
+    hull3 = cv.convexHull(cnt3)
+    cv.polylines(eo, [hull3], True, (255, 0, 0), 2)
+    #处理4的
+    contours4, hierarchy4 = cv.findContours(binary, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)  # 图片轮廓
+    cnt4 = contours4[4]
+    hull4 = cv.convexHull(cnt4)
+    cv.polylines(eo, [hull4], True, (255, 0, 0), 2)
+    #处理2的
+    contours2, hierarchy2 = cv.findContours(binary, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)  # 图片轮廓
+    cnt2 = contours2[2]
+    hull2 = cv.convexHull(cnt2)
+    cv.polylines(eo, [hull2], True, (255, 0, 0), 2)
+    # #处理0的
+    contours0, hierarchy0 = cv.findContours(binary, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)  # 图片轮廓
+    cnt0 = contours0[0]
+    # 寻找凸包并绘制凸包（轮廓）
+    hull0 = cv.convexHull(cnt0)
+    cv.polylines(eo, [hull0], True, (255, 0, 0), 2)
+    #处理1的
+    contours1, hierarchy1 = cv.findContours(binary, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)  # 图片轮廓
+    cnt1 = contours1[1]
+    # 寻找凸包并绘制凸包（轮廓）
+    hull1 = cv.convexHull(cnt1)
+    cv.polylines(eo, [hull1], True, (255, 0, 0), 2)
+    return eo
+
+
 # 用剪切数据剪切图片
 def cutPic(img, deviceId, cutDate):
     # 图片尺寸
@@ -31,16 +79,16 @@ def cutPic(img, deviceId, cutDate):
     h = img_size[1]  # 图片高度
     w = img_size[0]  # 图片宽度
     cutPicFile = img.crop((float(cutDate["x"]), float(cutDate["y"]), float(cutDate["x1"]), float(cutDate["y1"])))
-    path = "C:\\" + deviceId + "." + img.filename.split(".")[len(img.filename.split(".")) - 1]
+
+    # 图像处理
+    cutPicFile = cv_pretreatmentAndProcessing(cutPicFile)
+
+    path = "D:\\" + deviceId + "." + img.filename.split(".")[len(img.filename.split(".")) - 1]
     cutPicFile = cutPicFile.convert("RGB")
     cutPicFile.save(path)
     print("裁剪图片", img.filename)
     print("裁剪参数", cutDate)
     return path
-
-
-ocr = PaddleOCR(use_angle_cls=True, lang="ch",
-                page_num=2)  # need to run only once to download and load model into memory
 
 
 # 识别图片

@@ -1,6 +1,6 @@
 watchdog
-PIL
+image
 requests
-cv2
+cv
 paddlepaddle-gpu==2.3.2
 paddleocr>=2.0.1
